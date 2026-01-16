@@ -50,4 +50,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This DDEV add-on is provided as-is for managing Pantheon sites. Use at your own discretion.
+This project is licensed under the GNU General Public License v2 - see the LICENSE file for details.
