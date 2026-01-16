@@ -185,14 +185,23 @@ main() {
         # Get site info
         verbose_log "Fetching info for site: $SITE_NAME"
         SITE_INFO=$(terminus site:info "$SITE_NAME" --format=json 2>/dev/null)
-        
+
         if [ $? -ne 0 ]; then
             echo "Failed to get info"
             FAILED_SITES+=("$SITE_NAME (couldn't get info)")
             add_to_csv "$SITE_NAME" "unknown" "unknown" "error" "skipped" "Failed to get site info"
             continue
         fi
-        
+
+        # Validate that we have valid JSON before parsing
+        if ! echo "$SITE_INFO" | jq empty 2>/dev/null; then
+            echo "Invalid JSON response"
+            verbose_log "Invalid JSON from terminus site:info for $SITE_NAME"
+            FAILED_SITES+=("$SITE_NAME (invalid JSON response)")
+            add_to_csv "$SITE_NAME" "unknown" "unknown" "error" "skipped" "Invalid JSON response from API"
+            continue
+        fi
+
         # Extract site ID and upstream ID
         SITE_ID=$(echo "$SITE_INFO" | jq -r '.id // "unknown"')
         SITE_UPSTREAM=$(echo "$SITE_INFO" | jq -r '.upstream.id // empty')
@@ -224,14 +233,23 @@ main() {
         # Check existing organizations
         verbose_log "Checking existing organizations for $SITE_NAME"
         EXISTING_ORGS=$(terminus site:org:list "$SITE_NAME" --format=json 2>/dev/null)
-        
+
         if [ $? -ne 0 ]; then
             echo "  └─ Failed to list orgs"
             FAILED_SITES+=("$SITE_NAME (couldn't list orgs)")
             add_to_csv "$SITE_NAME" "$SITE_ID" "$SITE_UPSTREAM" "error" "failed" "Couldn't list organizations"
             continue
         fi
-        
+
+        # Validate that we have valid JSON before parsing
+        if ! echo "$EXISTING_ORGS" | jq empty 2>/dev/null; then
+            echo "  └─ Invalid JSON response for orgs"
+            verbose_log "Invalid JSON from terminus site:org:list for $SITE_NAME"
+            FAILED_SITES+=("$SITE_NAME (invalid JSON for org list)")
+            add_to_csv "$SITE_NAME" "$SITE_ID" "$SITE_UPSTREAM" "error" "failed" "Invalid JSON response from org list"
+            continue
+        fi
+
         # Check if supporting org already exists
         HAS_ORG=$(echo "$EXISTING_ORGS" | jq -r --arg org "$SUPPORTING_ORG" 'to_entries | .[] | select(.value.org_id == $org or .key == $org) | .key // empty' | head -n1)
         
