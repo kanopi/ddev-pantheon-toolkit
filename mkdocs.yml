@@ -1,6 +1,7 @@
 site_name: DDEV Pantheon Toolkit
 site_description: A DDEV add-on for managing Pantheon organizations
 site_url: https://kanopi.github.io/ddev-pantheon-toolkit
+site_dir: dist
 
 # Navigation structure
 nav:
