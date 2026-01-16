@@ -14,7 +14,7 @@ ddev_version_constraint: '>= v1.23.0'
 # Post-installation actions
 post_install_actions:
   # Make commands executable
-  - chmod +x .ddev/commands/web/*
+  - chmod +x .ddev/commands/web/add-org .ddev/commands/web/find-people .ddev/commands/web/find-upstreams .ddev/commands/web/site-inventory
 
   # Display success message
   - |
