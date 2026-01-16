@@ -1,0 +1,30 @@
+# Log files created by the scripts
+*.log
+pantheon_org_update_*.log
+
+# CSV exports (includes site_list.csv and site_list_people.csv)
+*.csv
+
+# macOS
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+test/
+*.test
+
+# Local files
+.claude/settings.local.json
+
+# Zensical documentation build artifacts
+dist/
+site/
+node_modules/
+package-lock.json
+.cache/

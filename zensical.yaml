@@ -1,0 +1,34 @@
+name: DDEV Pantheon Toolkit
+description: A DDEV add-on for managing Pantheon organizations
+url: https://kanopi.github.io/ddev-pantheon-toolkit
+
+# Navigation structure
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage Guide: usage.md
+  - Commands: commands.md
+  - CSV Exports: csv-exports.md
+  - Workflows: workflows.md
+  - Troubleshooting: troubleshooting.md
+
+# Theme configuration
+theme:
+  name: default
+  colors:
+    primary: "#0678be"
+    accent: "#ffc107"
+
+# GitHub repository
+repo_url: https://github.com/kanopi/ddev-pantheon-toolkit
+repo_name: kanopi/ddev-pantheon-toolkit
+
+# Footer
+copyright: "Copyright &copy; 2024 Kanopi Studios"
+
+# Features
+features:
+  - search
+  - navigation
+  - toc
+  - code_highlight

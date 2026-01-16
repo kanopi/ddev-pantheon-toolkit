@@ -1,0 +1,162 @@
+#!/bin/bash
+
+## Description: Discover upstreams used by sites in a Pantheon organization
+## Usage: find-upstreams <org-name>
+## Example: ddev find-upstreams my-organization
+#ddev-generated
+
+ORG_NAME="${1:-}"
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+print_message() {
+    local color=$1
+    local message=$2
+    echo -e "${color}${message}${NC}"
+}
+
+# Check required argument
+if [ -z "$ORG_NAME" ]; then
+    print_message "$RED" "Error: Missing required argument: <org-name>"
+    exit 1
+fi
+
+# Check prerequisites
+if ! command -v terminus &> /dev/null; then
+    print_message "$RED" "Error: Terminus is not installed"
+    exit 1
+fi
+
+if ! command -v jq &> /dev/null; then
+    print_message "$RED" "Error: jq is not installed"
+    exit 1
+fi
+
+if ! terminus auth:whoami &> /dev/null; then
+    print_message "$RED" "Error: Not authenticated. Run 'terminus auth:login'"
+    exit 1
+fi
+
+print_message "$GREEN" "=========================================="
+print_message "$GREEN" "Pantheon Upstream Discovery Tool"
+print_message "$GREEN" "=========================================="
+echo ""
+print_message "$YELLOW" "Organization: $ORG_NAME"
+echo ""
+
+# First, try to list organization upstreams directly
+print_message "$YELLOW" "Fetching organization upstreams..."
+UPSTREAMS=$(terminus upstream:list "$ORG_NAME" --format=json 2>/dev/null)
+
+if [ $? -eq 0 ] && [ -n "$UPSTREAMS" ]; then
+    print_message "$GREEN" "Organization Upstreams:"
+    echo ""
+    echo "$UPSTREAMS" | jq -r '.[] | "  ID: \(.id)\n  Name: \(.label // .machine_name)\n  Framework: \(.framework // "unknown")\n  ---"'
+    echo ""
+fi
+
+# Now analyze sites to find what upstreams are actually in use
+print_message "$YELLOW" "Analyzing sites to find upstreams in use..."
+SITES=$(terminus org:site:list "$ORG_NAME" --format=json 2>/dev/null)
+
+if [ $? -ne 0 ]; then
+    print_message "$RED" "Error: Failed to fetch sites from organization"
+    exit 1
+fi
+
+SITE_COUNT=$(echo "$SITES" | jq '. | length')
+if [ "$SITE_COUNT" -eq 0 ]; then
+    print_message "$YELLOW" "No sites found in organization"
+    exit 0
+fi
+
+print_message "$GREEN" "Found $SITE_COUNT sites. Analyzing upstreams..."
+echo ""
+
+# Create associative arrays to track upstreams
+declare -A UPSTREAM_NAMES
+declare -A UPSTREAM_SITES
+declare -A UPSTREAM_FRAMEWORKS
+
+# Process each site
+SITE_NAMES=$(echo "$SITES" | jq -r 'keys[]')
+CURRENT=0
+
+while IFS= read -r SITE_NAME; do
+    ((CURRENT++))
+    echo -ne "\rProcessing site $CURRENT/$SITE_COUNT..."
+    
+    SITE_INFO=$(terminus site:info "$SITE_NAME" --format=json 2>/dev/null)
+    
+    if [ $? -eq 0 ]; then
+        UPSTREAM_ID=$(echo "$SITE_INFO" | jq -r '.upstream.id // empty')
+        UPSTREAM_NAME=$(echo "$SITE_INFO" | jq -r '.upstream.label // .upstream.machine_name // empty')
+        FRAMEWORK=$(echo "$SITE_INFO" | jq -r '.framework // empty')
+        
+        if [ -n "$UPSTREAM_ID" ]; then
+            # Store upstream information
+            if [ -n "$UPSTREAM_NAME" ]; then
+                UPSTREAM_NAMES["$UPSTREAM_ID"]="$UPSTREAM_NAME"
+            fi
+            
+            if [ -n "$FRAMEWORK" ]; then
+                UPSTREAM_FRAMEWORKS["$UPSTREAM_ID"]="$FRAMEWORK"
+            fi
+            
+            # Append site to upstream's site list
+            if [ -n "${UPSTREAM_SITES[$UPSTREAM_ID]}" ]; then
+                UPSTREAM_SITES["$UPSTREAM_ID"]="${UPSTREAM_SITES[$UPSTREAM_ID]}, $SITE_NAME"
+            else
+                UPSTREAM_SITES["$UPSTREAM_ID"]="$SITE_NAME"
+            fi
+        fi
+    fi
+done <<< "$SITE_NAMES"
+
+echo -e "\r                                          \r" # Clear the progress line
+
+print_message "$GREEN" "=========================================="
+print_message "$GREEN" "Upstreams Currently in Use"
+print_message "$GREEN" "=========================================="
+echo ""
+
+# Display the results
+if [ ${#UPSTREAM_SITES[@]} -eq 0 ]; then
+    print_message "$YELLOW" "No upstreams found in use"
+else
+    for UPSTREAM_ID in "${!UPSTREAM_SITES[@]}"; do
+        # Count sites for this upstream
+        SITE_LIST="${UPSTREAM_SITES[$UPSTREAM_ID]}"
+        SITE_COUNT=$(echo "$SITE_LIST" | tr ',' '\n' | wc -l)
+        
+        print_message "$BLUE" "Upstream ID: $UPSTREAM_ID"
+        
+        if [ -n "${UPSTREAM_NAMES[$UPSTREAM_ID]}" ]; then
+            echo "  Name: ${UPSTREAM_NAMES[$UPSTREAM_ID]}"
+        fi
+        
+        if [ -n "${UPSTREAM_FRAMEWORKS[$UPSTREAM_ID]}" ]; then
+            echo "  Framework: ${UPSTREAM_FRAMEWORKS[$UPSTREAM_ID]}"
+        fi
+        
+        echo "  Sites using this upstream: $SITE_COUNT"
+        echo "  Site list: $SITE_LIST"
+        echo ""
+    done
+fi
+
+# Summary
+print_message "$GREEN" "=========================================="
+print_message "$GREEN" "Summary"
+print_message "$GREEN" "=========================================="
+echo ""
+print_message "$YELLOW" "Total unique upstreams in use: ${#UPSTREAM_SITES[@]}"
+print_message "$YELLOW" "Total sites analyzed: $CURRENT"
+echo ""
+print_message "$GREEN" "Tip: Use the Upstream ID with add-org to filter by upstream"
+print_message "$GREEN" "Example: ddev add-org --upstream <upstream-id> $ORG_NAME <supporting-org>"

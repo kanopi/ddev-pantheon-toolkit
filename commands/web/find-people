@@ -1,0 +1,45 @@
+#!/bin/bash
+
+## Description: List all team members across your Pantheon sites
+## Usage: find-people
+## Example: ddev find-people
+#ddev-generated
+
+PATH_SITE_LIST=~/site_list.csv
+PATH_SITE_LIST_PEOPLE=~/site_list_people.csv
+
+# Login
+terminus auth:login
+
+# Remove any existing files
+rm -f $PATH_SITE_LIST $PATH_SITE_LIST_PEOPLE
+
+# Create CSV header
+echo "Site,Email,Role" > $PATH_SITE_LIST_PEOPLE
+
+# Get a list of sites
+echo "Getting a list of all sites you have access to..."
+terminus site:list --fields=name --format=string > $PATH_SITE_LIST
+NUM_SITES=$(wc -l $PATH_SITE_LIST | awk '{print $1;}')
+
+# Get all the people associated with the sites
+INDEX=1
+while read SITE_ID; do
+  echo "$INDEX/$NUM_SITES Getting people for: $SITE_ID"
+
+  # Get team list in CSV format and append to output
+  terminus site:team:list -- $SITE_ID --format=csv --fields=email,role | tail -n +2 | while IFS=, read -r EMAIL ROLE; do
+    echo "$SITE_ID,$EMAIL,$ROLE" >> $PATH_SITE_LIST_PEOPLE
+  done
+
+  INDEX=$((INDEX+1))
+done < $PATH_SITE_LIST
+
+# Let people know where they can see the file
+REAL_PATH_SITE_LIST_PEOPLE=$(realpath $PATH_SITE_LIST_PEOPLE)
+echo ""
+echo ""
+echo "✓ Team member report saved to: $REAL_PATH_SITE_LIST_PEOPLE"
+echo ""
+echo "View in terminal: cat $REAL_PATH_SITE_LIST_PEOPLE"
+echo "Open in spreadsheet application or use for further analysis."
