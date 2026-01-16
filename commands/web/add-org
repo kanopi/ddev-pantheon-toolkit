@@ -193,12 +193,13 @@ main() {
             continue
         fi
 
-        # Validate that we have valid JSON before parsing
-        if ! echo "$SITE_INFO" | jq empty 2>/dev/null; then
-            echo "Invalid JSON response"
-            verbose_log "Invalid JSON from terminus site:info for $SITE_NAME"
-            FAILED_SITES+=("$SITE_NAME (invalid JSON response)")
-            add_to_csv "$SITE_NAME" "unknown" "unknown" "error" "skipped" "Invalid JSON response from API"
+        # Check if response is a JSON object (not a string like "frozen")
+        SITE_TYPE=$(echo "$SITE_INFO" | jq -r 'type')
+        if [ "$SITE_TYPE" != "object" ]; then
+            echo "Site status: $SITE_INFO"
+            verbose_log "Site returned non-object JSON ($SITE_TYPE): $SITE_INFO"
+            FAILED_SITES+=("$SITE_NAME (site status: $SITE_INFO)")
+            add_to_csv "$SITE_NAME" "unknown" "unknown" "$SITE_INFO" "skipped" "Site not accessible - status: $SITE_INFO"
             continue
         fi
 
@@ -241,12 +242,13 @@ main() {
             continue
         fi
 
-        # Validate that we have valid JSON before parsing
-        if ! echo "$EXISTING_ORGS" | jq empty 2>/dev/null; then
-            echo "  └─ Invalid JSON response for orgs"
-            verbose_log "Invalid JSON from terminus site:org:list for $SITE_NAME"
-            FAILED_SITES+=("$SITE_NAME (invalid JSON for org list)")
-            add_to_csv "$SITE_NAME" "$SITE_ID" "$SITE_UPSTREAM" "error" "failed" "Invalid JSON response from org list"
+        # Check if org list response is a JSON object
+        ORGS_TYPE=$(echo "$EXISTING_ORGS" | jq -r 'type')
+        if [ "$ORGS_TYPE" != "object" ]; then
+            echo "  └─ Unexpected org list response"
+            verbose_log "Org list returned non-object JSON ($ORGS_TYPE) for $SITE_NAME"
+            FAILED_SITES+=("$SITE_NAME (unexpected org list response)")
+            add_to_csv "$SITE_NAME" "$SITE_ID" "$SITE_UPSTREAM" "error" "failed" "Unexpected org list response type"
             continue
         fi
 
