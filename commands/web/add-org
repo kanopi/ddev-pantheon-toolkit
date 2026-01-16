@@ -233,7 +233,7 @@ main() {
         fi
         
         # Check if supporting org already exists
-        HAS_ORG=$(echo "$EXISTING_ORGS" | jq -r --arg org "$SUPPORTING_ORG" 'to_entries | .[] | select(.value.id == $org or .key == $org) | .key // empty' | head -n1)
+        HAS_ORG=$(echo "$EXISTING_ORGS" | jq -r --arg org "$SUPPORTING_ORG" 'to_entries | .[] | select(.value.org_id == $org or .key == $org) | .key // empty' | head -n1)
         
         if [ -n "$HAS_ORG" ]; then
             echo "  └─ Already has supporting org"
