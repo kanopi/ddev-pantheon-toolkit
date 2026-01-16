@@ -51,3 +51,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the GNU General Public License v2 - see the LICENSE file for details.
+
+---
+
+Originally Contributed by Kanopi Studios
