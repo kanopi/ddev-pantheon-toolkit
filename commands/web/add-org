@@ -185,14 +185,24 @@ main() {
         # Get site info
         verbose_log "Fetching info for site: $SITE_NAME"
         SITE_INFO=$(terminus site:info "$SITE_NAME" --format=json 2>/dev/null)
-        
+
         if [ $? -ne 0 ]; then
             echo "Failed to get info"
             FAILED_SITES+=("$SITE_NAME (couldn't get info)")
             add_to_csv "$SITE_NAME" "unknown" "unknown" "error" "skipped" "Failed to get site info"
             continue
         fi
-        
+
+        # Check if response is a JSON object (not a string like "frozen")
+        SITE_TYPE=$(echo "$SITE_INFO" | jq -r 'type')
+        if [ "$SITE_TYPE" != "object" ]; then
+            echo "Site status: $SITE_INFO"
+            verbose_log "Site returned non-object JSON ($SITE_TYPE): $SITE_INFO"
+            FAILED_SITES+=("$SITE_NAME (site status: $SITE_INFO)")
+            add_to_csv "$SITE_NAME" "unknown" "unknown" "$SITE_INFO" "skipped" "Site not accessible - status: $SITE_INFO"
+            continue
+        fi
+
         # Extract site ID and upstream ID
         SITE_ID=$(echo "$SITE_INFO" | jq -r '.id // "unknown"')
         SITE_UPSTREAM=$(echo "$SITE_INFO" | jq -r '.upstream.id // empty')
@@ -224,14 +234,24 @@ main() {
         # Check existing organizations
         verbose_log "Checking existing organizations for $SITE_NAME"
         EXISTING_ORGS=$(terminus site:org:list "$SITE_NAME" --format=json 2>/dev/null)
-        
+
         if [ $? -ne 0 ]; then
             echo "  └─ Failed to list orgs"
             FAILED_SITES+=("$SITE_NAME (couldn't list orgs)")
             add_to_csv "$SITE_NAME" "$SITE_ID" "$SITE_UPSTREAM" "error" "failed" "Couldn't list organizations"
             continue
         fi
-        
+
+        # Check if org list response is a JSON object
+        ORGS_TYPE=$(echo "$EXISTING_ORGS" | jq -r 'type')
+        if [ "$ORGS_TYPE" != "object" ]; then
+            echo "  └─ Unexpected org list response"
+            verbose_log "Org list returned non-object JSON ($ORGS_TYPE) for $SITE_NAME"
+            FAILED_SITES+=("$SITE_NAME (unexpected org list response)")
+            add_to_csv "$SITE_NAME" "$SITE_ID" "$SITE_UPSTREAM" "error" "failed" "Unexpected org list response type"
+            continue
+        fi
+
         # Check if supporting org already exists
         HAS_ORG=$(echo "$EXISTING_ORGS" | jq -r --arg org "$SUPPORTING_ORG" 'to_entries | .[] | select(.value.org_id == $org or .key == $org) | .key // empty' | head -n1)
         
