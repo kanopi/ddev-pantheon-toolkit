@@ -1,0 +1,37 @@
+# Zensical configuration for DDEV Pantheon Toolkit documentation
+
+[project]
+site_name = "DDEV Pantheon Toolkit"
+site_url = "https://kanopi.github.io/ddev-pantheon-toolkit"
+site_description = "A DDEV add-on for managing Pantheon organizations"
+site_author = "Kanopi Studios"
+
+nav = [
+  {"Home" = "index.md"},
+  {"Installation" = "installation.md"},
+  {"Usage Guide" = "usage.md"},
+  {"Commands" = "commands.md"},
+  {"CSV Exports" = "csv-exports.md"},
+  {"Workflows" = "workflows.md"},
+  {"Troubleshooting" = "troubleshooting.md"}
+]
+
+[theme]
+name = "default"
+
+[theme.colors]
+primary = "#0678be"
+accent = "#ffc107"
+
+[repo]
+url = "https://github.com/kanopi/ddev-pantheon-toolkit"
+name = "kanopi/ddev-pantheon-toolkit"
+
+[footer]
+copyright = "Copyright &copy; 2024 Kanopi Studios"
+
+[features]
+search = true
+navigation = true
+toc = true
+code_highlight = true

@@ -1,0 +1,2 @@
+# Python dependencies for DDEV Pantheon Toolkit documentation
+zensical>=0.0.9
